@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { signIn, getSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 
 export default function SignInPage() {
   const [email, setEmail] = useState("")
@@ -41,7 +40,7 @@ export default function SignInPage() {
           router.push(redirectTo)
         }
       }
-    } catch (error) {
+    } catch {
       setError("An error occurred during sign in")
     } finally {
       setLoading(false)
@@ -115,7 +114,7 @@ export default function SignInPage() {
 
           <div className="text-center">
             <p className="text-sm text-gray-600">
-              Demo credentials: any email with password "password123"
+              Demo credentials: any email with password &quot;password123&quot;
             </p>
           </div>
         </form>
