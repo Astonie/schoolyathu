@@ -34,14 +34,14 @@ export async function requireRole(allowedRoles: UserRole[]) {
 
 export async function requireSchoolAccess() {
   const user = await requireAuth()
-  if (!user.schoolId && user.role !== 'SUPER_ADMIN') {
+  if (!user.schoolId && user.role !== UserRole.SUPER_ADMIN) {
     redirect('/auth/error?error=NoSchoolAccess')
   }
   return user
 }
 
 export function getSchoolFilter(user: { role: string; schoolId: string | null }) {
-  if (user.role === 'SUPER_ADMIN') {
+  if (user.role === UserRole.SUPER_ADMIN) {
     return {} // Super admin can see all schools
   }
   
@@ -53,7 +53,7 @@ export function getSchoolFilter(user: { role: string; schoolId: string | null })
 }
 
 export function canAccessSchool(user: { role: string; schoolId: string | null }, targetSchoolId: string) {
-  if (user.role === 'SUPER_ADMIN') return true
+  if (user.role === UserRole.SUPER_ADMIN) return true
   return user.schoolId === targetSchoolId
 }
 

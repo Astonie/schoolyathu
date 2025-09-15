@@ -1,5 +1,6 @@
 import { withAuth } from "next-auth/middleware"
 import { NextResponse } from "next/server"
+import { UserRole } from "@/lib/auth-utils"
 
 export default withAuth(
   function middleware(req) {
@@ -17,12 +18,12 @@ export default withAuth(
     }
 
     // Super admin can access everything
-    if (token.role === 'SUPER_ADMIN') {
+    if (token.role === UserRole.SUPER_ADMIN) {
       return NextResponse.next()
     }
 
     // Check if user belongs to a school (multi-tenant check)
-    if (!token.schoolId && token.role !== 'SUPER_ADMIN') {
+    if (!token.schoolId && token.role !== UserRole.SUPER_ADMIN) {
       return NextResponse.redirect(new URL('/auth/error?error=NoSchoolAccess', req.url))
     }
 
@@ -46,7 +47,7 @@ export default withAuth(
       }
 
       // Super admin has access to everything
-      if (token.role === 'SUPER_ADMIN') {
+      if (token.role === UserRole.SUPER_ADMIN) {
         return NextResponse.next()
       }
 

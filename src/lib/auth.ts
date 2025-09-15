@@ -69,7 +69,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (token) {
         session.user.id = token.sub!
-        session.user.role = token.role as UserRole
+        session.user.role = token.role as string
         session.user.schoolId = token.schoolId as string
       }
       return session
@@ -83,7 +83,7 @@ export const authOptions: NextAuthOptions = {
 
 declare module "next-auth" {
   interface User {
-    role: UserRole
+    role: string
     schoolId: string | null
   }
   
@@ -93,7 +93,7 @@ declare module "next-auth" {
       email: string
       name?: string | null
       image?: string | null
-      role: UserRole
+      role: string
       schoolId: string | null
     }
   }
@@ -101,7 +101,7 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT {
-    role: UserRole
+    role: string
     schoolId: string | null
   }
 }
