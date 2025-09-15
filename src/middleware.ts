@@ -29,11 +29,25 @@ export default withAuth(
     // Role-based access control for dashboard routes
     if (pathname.startsWith('/dashboard')) {
       const roleRoutes = {
-        SUPER_ADMIN: ['/dashboard/super-admin'],
-        SCHOOL_ADMIN: ['/dashboard/school-admin'],
-        TEACHER: ['/dashboard/teacher'],
-        PARENT: ['/dashboard/parent'],
-        STUDENT: ['/dashboard/student']
+        SUPER_ADMIN: ['/dashboard'], // Super admin can access everything
+        SCHOOL_ADMIN: [
+          '/dashboard/school-admin',
+          '/dashboard/students', 
+          '/dashboard/teachers',
+          '/dashboard/parents',
+          '/dashboard/classes',
+          '/dashboard/subjects',
+          '/dashboard/invoices',
+          '/dashboard/settings'
+        ],
+        TEACHER: ['/dashboard/teacher', '/dashboard/classes', '/dashboard/students', '/dashboard/attendance', '/dashboard/grades'],
+        PARENT: ['/dashboard/parent', '/dashboard/children', '/dashboard/grades', '/dashboard/attendance', '/dashboard/invoices'],
+        STUDENT: ['/dashboard/student', '/dashboard/grades', '/dashboard/attendance', '/dashboard/assignments']
+      }
+
+      // Super admin has access to everything
+      if (token.role === 'SUPER_ADMIN') {
+        return NextResponse.next()
       }
 
       const allowedRoutes = roleRoutes[token.role as keyof typeof roleRoutes] || []
