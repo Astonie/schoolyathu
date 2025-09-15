@@ -1,23 +1,16 @@
-"use client"
+import { requireRole, UserRole } from "@/lib/auth-utils"
+import DashboardLayout from "@/components/dashboard-layout"
+import AddStudentForm from "@/components/students/add-student-form"
 
-import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { 
-  ArrowLeft, 
-  Save, 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Calendar, 
-  GraduationCap,
-  Users,
-  AlertCircle,
-  Upload,
-  X
-} from 'lucide-react'
+export default async function AddStudentPage() {
+  const user = await requireRole([UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN])
+
+  return (
+    <DashboardLayout role={user.role}>
+      <AddStudentForm />
+    </DashboardLayout>
+  )
+}
 
 interface Class {
   id: string
