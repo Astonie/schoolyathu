@@ -1,5 +1,6 @@
 import { requireRole, UserRole } from "@/lib/auth-utils"
 import DashboardLayout from "@/components/dashboard-layout"
+import Link from "next/link"
 
 export default async function SchoolAdminDashboard() {
   const user = await requireRole([UserRole.SCHOOL_ADMIN])
@@ -91,15 +92,15 @@ export default async function SchoolAdminDashboard() {
               <h3 className="text-lg font-medium text-gray-900">Quick Actions</h3>
             </div>
             <div className="px-6 py-4 space-y-3">
-              <button className="w-full text-left px-4 py-2 text-sm text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100">
+              <Link href="/dashboard/students/add" className="block w-full text-left px-4 py-2 text-sm text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100">
                 + Add New Student
-              </button>
-              <button className="w-full text-left px-4 py-2 text-sm text-green-600 bg-green-50 rounded-md hover:bg-green-100">
+              </Link>
+              <Link href="/dashboard/teachers/add" className="block w-full text-left px-4 py-2 text-sm text-green-600 bg-green-50 rounded-md hover:bg-green-100">
                 + Add New Teacher
-              </button>
-              <button className="w-full text-left px-4 py-2 text-sm text-purple-600 bg-purple-50 rounded-md hover:bg-purple-100">
+              </Link>
+              <Link href="/dashboard/classes/add" className="block w-full text-left px-4 py-2 text-sm text-purple-600 bg-purple-50 rounded-md hover:bg-purple-100">
                 + Create New Class
-              </button>
+              </Link>
             </div>
           </div>
 
