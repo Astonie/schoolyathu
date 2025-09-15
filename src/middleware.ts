@@ -1,6 +1,5 @@
 import { withAuth } from "next-auth/middleware"
 import { NextResponse } from "next/server"
-import { UserRole } from "@/lib/auth-utils"
 
 export default withAuth(
   function middleware(req) {
@@ -18,46 +17,26 @@ export default withAuth(
     }
 
     // Super admin can access everything
-    if (token.role === UserRole.SUPER_ADMIN) {
+    if (token.role === 'SUPER_ADMIN') {
       return NextResponse.next()
     }
 
     // Check if user belongs to a school (multi-tenant check)
-    if (!token.schoolId && token.role !== UserRole.SUPER_ADMIN) {
+    if (!token.schoolId && token.role !== 'SUPER_ADMIN') {
       return NextResponse.redirect(new URL('/auth/error?error=NoSchoolAccess', req.url))
     }
 
     // Role-based access control for dashboard routes
     if (pathname.startsWith('/dashboard')) {
-      const roleRoutes = {
-        SUPER_ADMIN: ['/dashboard'], // Super admin can access everything
-        SCHOOL_ADMIN: [
-          '/dashboard/school-admin',
-          '/dashboard/students', 
-          '/dashboard/teachers',
-          '/dashboard/parents',
-          '/dashboard/classes',
-          '/dashboard/subjects',
-          '/dashboard/invoices',
-          '/dashboard/settings'
-        ],
-        TEACHER: ['/dashboard/teacher', '/dashboard/classes', '/dashboard/students', '/dashboard/attendance', '/dashboard/grades'],
-        PARENT: ['/dashboard/parent', '/dashboard/children', '/dashboard/grades', '/dashboard/attendance', '/dashboard/invoices'],
-        STUDENT: ['/dashboard/student', '/dashboard/grades', '/dashboard/attendance', '/dashboard/assignments']
-      }
-
       // Super admin has access to everything
-      if (token.role === UserRole.SUPER_ADMIN) {
+      if (token.role === 'SUPER_ADMIN') {
         return NextResponse.next()
       }
 
-      const allowedRoutes = roleRoutes[token.role as keyof typeof roleRoutes] || []
-      const hasAccess = allowedRoutes.some(route => pathname.startsWith(route)) ||
-                       pathname === '/dashboard' // Allow base dashboard
-
-      if (!hasAccess) {
-        const defaultRoute = allowedRoutes[0] || '/dashboard'
-        return NextResponse.redirect(new URL(defaultRoute, req.url))
+      // Basic role validation - let the server-side handle detailed permissions
+      const validRoles = ['SCHOOL_ADMIN', 'TEACHER', 'PARENT', 'STUDENT']
+      if (!validRoles.includes(token.role as string)) {
+        return NextResponse.redirect(new URL('/auth/error?error=InvalidRole', req.url))
       }
     }
 
