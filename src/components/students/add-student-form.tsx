@@ -170,6 +170,8 @@ export default function AddStudentForm() {
     }
 
     setLoading(true)
+    setErrors({}) // Clear previous errors
+    
     try {
       const response = await fetch('/api/students', {
         method: 'POST',
@@ -184,11 +186,22 @@ export default function AddStudentForm() {
         router.push(`/dashboard/students/${student.id}`)
       } else {
         const errorData = await response.json()
-        setErrors({ submit: errorData.error || 'Failed to create student' })
+        
+        // Handle specific email error
+        if (errorData.error === 'Email already exists') {
+          setErrors({ 
+            email: errorData.details || 'This email address is already registered',
+            submit: 'Please use a different email address' 
+          })
+        } else {
+          setErrors({ 
+            submit: errorData.details || errorData.error || 'Failed to create student' 
+          })
+        }
       }
     } catch (error) {
       console.error('Error creating student:', error)
-      setErrors({ submit: 'An unexpected error occurred' })
+      setErrors({ submit: 'Network error: Unable to connect to the server. Please try again.' })
     } finally {
       setLoading(false)
     }

@@ -171,14 +171,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Normalize email for consistent checking
+    const normalizedEmail = email.trim().toLowerCase()
+
     // Check if email already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email }
+      where: { email: normalizedEmail },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        student: {
+          select: {
+            firstName: true,
+            lastName: true
+          }
+        }
+      }
     })
     
     if (existingUser) {
       return NextResponse.json(
-        { error: 'Email already exists' },
+        { 
+          error: 'Email already exists',
+          details: `The email ${normalizedEmail} is already registered${existingUser.student ? ` for student ${existingUser.student.firstName} ${existingUser.student.lastName}` : ''}` 
+        },
         { status: 400 }
       )
     }
@@ -200,87 +217,129 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate student ID
-    const studentCount = await prisma.student.count({
-      where: getSchoolFilter(user)
-    })
-    const studentId = `STU${String(studentCount + 1).padStart(4, '0')}`
-
-    // Create user account first
-    const newUser = await prisma.user.create({
-      data: {
-        email,
-        name: `${firstName} ${lastName}`,
-        role: 'STUDENT',
-        schoolId: user.schoolId!,
-        active: true
-      }
-    })
-
-    // Create student profile
-    const student = await prisma.student.create({
-      data: {
-        userId: newUser.id,
-        schoolId: user.schoolId!,
-        studentId,
-        firstName,
-        lastName,
-        dateOfBirth: new Date(dateOfBirth),
-        gender,
-        address,
-        phone,
-        emergencyContact,
-        classId,
-        admissionDate: admissionDate ? new Date(admissionDate) : new Date(),
-        nationality,
-        bloodGroup,
-        medicalConditions,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            active: true
-          }
-        },
-        class: {
-          select: {
-            id: true,
-            name: true,
-            grade: true,
-            section: true
-          }
-        },
-        school: {
-          select: {
-            name: true
-          }
-        }
-      }
-    })
-
-    // Link to parents if provided
+    // Validate parent IDs if provided
     if (parentIds.length > 0) {
-      await Promise.all(
-        parentIds.map((parentId: string, index: number) =>
-          prisma.parentStudent.create({
-            data: {
-              parentId,
-              studentId: student.id,
-              relationship: index === 0 ? 'father' : 'mother' // Default relationships
-            }
-          })
+      const existingParents = await prisma.parent.findMany({
+        where: {
+          id: { in: parentIds },
+          ...getSchoolFilter(user)
+        }
+      })
+      
+      if (existingParents.length !== parentIds.length) {
+        return NextResponse.json(
+          { error: 'One or more selected parents not found or access denied' },
+          { status: 400 }
         )
-      )
+      }
     }
 
-    return NextResponse.json(student, { status: 201 })
+    // Use transaction to ensure data consistency
+    const result = await prisma.$transaction(async (tx) => {
+      // Generate student ID
+      const studentCount = await tx.student.count({
+        where: getSchoolFilter(user)
+      })
+      const studentId = `STU${String(studentCount + 1).padStart(4, '0')}`
+
+      // Create user account first
+      const newUser = await tx.user.create({
+        data: {
+          email: normalizedEmail,
+          name: `${firstName} ${lastName}`,
+          role: 'STUDENT',
+          schoolId: user.schoolId!,
+          active: true
+        }
+      })
+
+      // Create student profile
+      const student = await tx.student.create({
+        data: {
+          userId: newUser.id,
+          schoolId: user.schoolId!,
+          studentId,
+          firstName,
+          lastName,
+          dateOfBirth: new Date(dateOfBirth),
+          gender,
+          address: address || null,
+          phone: phone || null,
+          emergencyContact: emergencyContact || null,
+          classId: classId || null,
+          admissionDate: admissionDate ? new Date(admissionDate) : new Date(),
+          nationality: nationality || null,
+          bloodGroup: bloodGroup || null,
+          medicalConditions: medicalConditions || null,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              active: true
+            }
+          },
+          class: {
+            select: {
+              id: true,
+              name: true,
+              grade: true,
+              section: true
+            }
+          },
+          school: {
+            select: {
+              name: true
+            }
+          }
+        }
+      })
+
+      // Link to parents if provided
+      if (parentIds.length > 0) {
+        await Promise.all(
+          parentIds.map((parentId: string, index: number) =>
+            tx.parentStudent.create({
+              data: {
+                parentId,
+                studentId: student.id,
+                relationship: index === 0 ? 'father' : 'mother' // Default relationships
+              }
+            })
+          )
+        )
+      }
+
+      return student
+    })
+
+    return NextResponse.json(result, { status: 201 })
   } catch (error) {
     console.error('Error creating student:', error)
+    
+    // Handle specific database errors
+    if (error && typeof error === 'object' && 'code' in error) {
+      const dbError = error as { code: string }
+      
+      if (dbError.code === 'P2002') {
+        return NextResponse.json(
+          { error: 'Email already exists', details: 'This email address is already registered in the system' },
+          { status: 400 }
+        )
+      }
+      
+      if (dbError.code === 'P2003') {
+        return NextResponse.json(
+          { error: 'Invalid reference', details: 'One or more referenced records (class, parent) do not exist' },
+          { status: 400 }
+        )
+      }
+    }
+
     return NextResponse.json(
-      { error: 'Failed to create student' },
+      { error: 'Failed to create student', details: 'An unexpected error occurred while creating the student record' },
       { status: 500 }
     )
   }
